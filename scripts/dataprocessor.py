@@ -135,7 +135,7 @@ class Final(InsideDesign):
         backup = os.path.expanduser('~/.toprc-autoware-backup')
         self.toprc_setup(toprc, backup)
 
-        cpu_ibls = [ InfoBarLabel(self, 'CPU'+str(i)) for i in range(psutil.NUM_CPUS) ]
+        cpu_ibls = [ InfoBarLabel(self, 'CPU'+str(i)) for i in range(get_cpu_count()) ]
         sz = sizer_wrap(cpu_ibls, wx.HORIZONTAL, 1, wx.EXPAND, 0)
         self.sizer_cpuinfo.Add(sz, 8, wx.ALL | wx.EXPAND, 4)
 
@@ -405,9 +405,9 @@ class Final(InsideDesign):
                 self.selected_topic_dic[push] = dic[self.select]
                 if not((self.select == 5) or (self.select == 6)):
                     # cmd = "roslaunch velodyne_pointcloud 32e_points.launch"
-                    cmd = "roslaunch" + " ./src/dataprocess/scripts/" + dic[self.select] + " calibration:=%s" %self.file_path
+                    cmd = "roslaunch" + " dataprocess " + dic[self.select] + " calibration:=%s" %self.file_path
                 else:
-                    cmd = "roslaunch" + " ./src/dataprocess/scripts/" + dic[self.select]
+                    cmd = "roslaunch" + " dataprocess " + dic[self.select]
                 self.cmd_dic[push] = (cmd, None)
                 self.launch_kill_proc2(push, self.cmd_dic)
                 if push == self.objx:
@@ -1366,8 +1366,8 @@ class Final(InsideDesign):
     		(pdic, _, prm) = self.obj_to_pdic_gdic_prm(obj, sys=True)
 
     	cpu_chks = self.param_value_get(pdic, prm, 'cpu_chks')
-    	cpu_chks = cpu_chks if cpu_chks else [ True for i in range(psutil.NUM_CPUS) ]
-    	cpus = [ i for i in range(psutil.NUM_CPUS) if cpu_chks[i] ]
+    	cpu_chks = cpu_chks if cpu_chks else [ True for i in range(get_cpu_count()) ]
+    	cpus = [ i for i in range(get_cpu_count()) if cpu_chks[i] ]
     	nice = self.param_value_get(pdic, prm, 'nice', 0)
 
     	d = { 'OTHER':SCHED_OTHER, 'FIFO':SCHED_FIFO, 'RR':SCHED_RR }
@@ -1699,7 +1699,7 @@ class Final(InsideDesign):
     	mem_ibl.lmt_bar_prg = rate_mem
 
     	alerted = False
-    	cpu_n = psutil.NUM_CPUS
+    	cpu_n = get_cpu_count()
 
     	while not ev.wait(interval):
     		s = subprocess.check_output(['sh', '-c', 'env COLUMNS=512 top -b -n 2 -d 0.1']).strip()
@@ -3466,6 +3466,12 @@ def set_scheduling_policy(proc, policy, priority):
 	}
 	return send_to_proc_manager(order)
 
+def get_cpu_count():
+	try:
+		return psutil.NUM_CPUS
+	except AttributeError:
+		return psutil.cpu_count()
+
 
 class DetailDialog(wx.Dialog):
     def __init__(self, parent):
@@ -3474,7 +3480,7 @@ class DetailDialog(wx.Dialog):
         panel = wx.Panel(self, wx.ID_ANY)
         layout = wx.BoxSizer(wx.VERTICAL)
 
-        self.filename = os.getcwd() + "/src/dataprocess/scripts/32db.yaml"
+        self.filename = os.getcwd() + "/src/util/packages/dataprocess/scripts/32db.yaml"
         self.tc2 = wx.TextCtrl(panel, wx.ID_ANY, self.filename, style=1024)
         self.tc2.SetMinSize((300, 29))
         self.Bind(wx.EVT_TEXT_ENTER, self.update_path, self.tc2)
